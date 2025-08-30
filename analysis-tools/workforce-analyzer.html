@@ -1,1 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workforce Planning Digital Twin - Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .upload-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 2px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .file-input-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-input-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: inline-block;
+            font-weight: 500;
+            border: none;
+            font-size: 1rem;
+        }
+        
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .demo-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .generate-demo-btn {
+            background: #f39c12;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .generate-demo-btn:hover {
+            background: #e67e22;
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .analysis-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s;
+        }
+        
+        .analysis-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        
+        .simulation-panel {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+        
+        .simulation-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+        
+        .simulate-btn {
+            background: #00b894;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: background 0.3s;
+            margin: 20px 0;
+        }
+        
+        .simulate-btn:hover {
+            background: #00a085;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 20px;
+            font-weight: 500;
+        }
+        
+        .loading {
+            color: #667eea;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        .success {
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Workforce Planning Digital Twin</h1>
+            <p>Strategic Analysis & Simulation Tool for Customer Support Teams</p>
+        </div>
+        
+        <div class="content">
+            <div class="upload-section">
+                <h2>📊 Upload Your Workforce Data</h2>
+                <p>Upload a CSV file containing your customer support team data for analysis</p>
+                <div class="file-input-container">
+                    <input type="file" id="csvFile" class="file-input" accept=".csv" />
+                    <label for="csvFile" class="file-input-button">Choose CSV File</label>
+                </div>
+                <div id="file-status" class="status"></div>
+                
+                <div class="demo-section">
+                    <h3>🎯 No data? Try our demo!</h3>
+                    <p>Generate sample workforce data to explore the tool's capabilities</p>
+                    <button class="generate-demo-btn" onclick="generateDemoData()">Generate Demo Data</button>
+                </div>
+            </div>
+            
+            <div id="analysis-results" class="hidden">
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <div class="card-title">📈 Workforce Overview</div>
+                        <div id="workforce-metrics"></div>
+                    </div>
+                    
+                    <div class="analysis-card">
+                        <div class="card-title">⭐ Performance Metrics</div>
+                        <div id="performance-metrics"></div>
+                    </div>
+                    
+                    <div class="analysis-card">
+                        <div class="card-title">🎯 Skills Distribution</div>
+                        <div class="chart-container">
+                            <canvas id="skillsChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-card">
+                        <div class="card-title">📍 Location Breakdown</div>
+                        <div class="chart-container">
+                            <canvas id="locationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="simulation-panel">
+                    <h2>🔮 Workforce Simulation Engine</h2>
+                    <p>Model different scenarios and their impact on your team</p>
+                    
+                    <div class="simulation-controls">
+                        <div class="control-group">
+                            <label>Scenario Type</label>
+                            <select id="scenarioType">
+                                <option value="reduction">Workforce Reduction</option>
+                                <option value="ai">AI Augmentation</option>
+                                <option value="capacity">Capacity Redistribution</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>Impact Percentage</label>
+                            <input type="range" id="impactPercent" min="5" max="50" value="15">
+                            <span id="percentDisplay">15%</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>Priority Metric</label>
+                            <select id="priorityMetric">
+                                <option value="performance">Performance Score</option>
+                                <option value="cost">Cost Efficiency</option>
+                                <option value="experience">Customer Experience</option>
+                                <option value="risk">Attrition Risk</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="simulate-btn" onclick="runSimulation()">🚀 Run Simulation</button>
+                    
+                    <div id="simulation-results" class="hidden">
+                        <div class="analysis-grid">
+                            <div class="analysis-card">
+                                <div class="card-title">💰 Financial Impact</div>
+                                <div id="financial-impact"></div>
+                            </div>
+                            
+                            <div class="analysis-card">
+                                <div class="card-title">👥 Team Impact</div>
+                                <div id="team-impact"></div>
+                            </div>
+                            
+                            <div class="analysis-card">
+                                <div class="card-title">📊 Recommended Actions</div>
+                                <div id="recommendations"></div>
+                            </div>
+                            
+                            <div class="analysis-card">
+                                <div class="card-title">⚠️ Risk Assessment</div>
+                                <div id="risk-assessment"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        let workforceData = [];
+        
+        // File upload handler
+        document.getElementById('csvFile').addEventListener('change', handleFileUpload);
+        document.getElementById('impactPercent').addEventListener('input', function() {
+            document.getElementById('percentDisplay').textContent = this.value + '%';
+        });
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('file-status').innerHTML = '<div class="loading">📝 Processing your data...</div>';
+            
+            Papa.parse(file, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        document.getElementById('file-status').innerHTML = '<div class="error">❌ Error parsing CSV file</div>';
+                        return;
+                    }
+                    
+                    workforceData = results.data;
+                    document.getElementById('file-status').innerHTML = `<div class="success">✅ Successfully loaded ${workforceData.length} employee records</div>`;
+                    displayAnalysis();
+                },
+                error: function(error) {
+                    document.getElementById('file-status').innerHTML = '<div class="error">❌ Error reading file</div>';
+                }
+            });
+        }
+        
+        function generateDemoData() {
+            // Generate sample data using the structure from the original JS file
+            const roles = ['Senior Support Agent', 'Support Agent', 'Junior Support Agent', 'Team Lead', 'Support Specialist'];
+            const departments = ['Technical Support', 'Customer Success', 'Billing Support', 'Product Support'];
+            const locations = ['San Francisco, CA', 'Austin, TX', 'New York, NY', 'Denver, CO', 'Remote'];
+            
+            workforceData = [];
+            
+            for (let i = 1; i <= 50; i++) {
+                const tenure = Math.random() * 8;
+                const age = 22 + Math.random() * 18;
+                const role = roles[Math.floor(Math.random() * roles.length)];
+                const location = locations[Math.floor(Math.random() * locations.length)];
+                
+                workforceData.push({
+                    agent_id: `CS${String(i).padStart(3, '0')}`,
+                    name: generateRandomName(),
+                    age: Math.round(age),
+                    gender: Math.random() > 0.52 ? 'Female' : 'Male',
+                    tenure_years: Math.round(tenure * 10) / 10,
+                    role: role,
+                    department: departments[Math.floor(Math.random() * departments.length)],
+                    location: location,
+                    base_salary: Math.round(45000 + Math.random() * 40000),
+                    performance_score: Math.round((2 + Math.random() * 3) * 10) / 10,
+                    csat_score: Math.round((3.8 + Math.random() * 1.2) * 10) / 10,
+                    nps_score: Math.round((6 + Math.random() * 4) * 10) / 10,
+                    aht_minutes: Math.round((8 + Math.random() * 12) * 10) / 10,
+                    fcr_rate: Math.round((0.65 + Math.random() * 0.25) * 100) / 100,
+                    tickets_per_day: Math.round(15 + Math.random() * 25),
+                    engagement_score: Math.round((3 + Math.random() * 2) * 10) / 10,
+                    attrition_risk: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)],
+                    skill_technical_troubleshooting: Math.round(1 + Math.random() * 4),
+                    skill_communication: Math.round(1 + Math.random() * 4),
+                    skill_product_knowledge: Math.round(1 + Math.random() * 4)
+                });
+            }
+            
+            document.getElementById('file-status').innerHTML = `<div class="success">✅ Generated ${workforceData.length} demo employee records</div>`;
+            displayAnalysis();
+        }
+        
+        function generateRandomName() {
+            const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Emma', 'Liam', 'Sophia', 'Noah'];
+            const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
+            return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+        }
+        
+        function displayAnalysis() {
+            document.getElementById('analysis-results').classList.remove('hidden');
+            
+            // Calculate workforce metrics
+            const totalAgents = workforceData.length;
+            const avgTenure = (workforceData.reduce((sum, agent) => sum + (agent.tenure_years || 0), 0) / totalAgents).toFixed(1);
+            const avgPerformance = (workforceData.reduce((sum, agent) => sum + (agent.performance_score || 0), 0) / totalAgents).toFixed(1);
+            const avgCSAT = (workforceData.reduce((sum, agent) => sum + (agent.csat_score || 0), 0) / totalAgents).toFixed(1);
+            const highRiskCount = workforceData.filter(agent => agent.attrition_risk === 'High').length;
+            
+            document.getElementById('workforce-metrics').innerHTML = `
+                <div class="metric">
+                    <span>Total Agents</span>
+                    <span class="metric-value">${totalAgents}</span>
+                </div>
+                <div class="metric">
+                    <span>Average Tenure</span>
+                    <span class="metric-value">${avgTenure} years</span>
+                </div>
+                <div class="metric">
+                    <span>High Risk Agents</span>
+                    <span class="metric-value">${highRiskCount}</span>
+                </div>
+                <div class="metric">
+                    <span>Remote Workers</span>
+                    <span class="metric-value">${workforceData.filter(agent => agent.location === 'Remote').length}</span>
+                </div>
+            `;
+            
+            document.getElementById('performance-metrics').innerHTML = `
+                <div class="metric">
+                    <span>Avg Performance Score</span>
+                    <span class="metric-value">${avgPerformance}/5.0</span>
+                </div>
+                <div class="metric">
+                    <span>Avg CSAT Score</span>
+                    <span class="metric-value">${avgCSAT}/5.0</span>
+                </div>
+                <div class="metric">
+                    <span>Avg Tickets/Day</span>
+                    <span class="metric-value">${(workforceData.reduce((sum, agent) => sum + (agent.tickets_per_day || 0), 0) / totalAgents).toFixed(0)}</span>
+                </div>
+                <div class="metric">
+                    <span>Avg FCR Rate</span>
+                    <span class="metric-value">${(workforceData.reduce((sum, agent) => sum + (agent.fcr_rate || 0), 0) / totalAgents * 100).toFixed(0)}%</span>
+                </div>
+            `;
+            
+            // Create skills chart
+            createSkillsChart();
+            createLocationChart();
+        }
+        
+        function createSkillsChart() {
+            const ctx = document.getElementById('skillsChart').getContext('2d');
+            
+            const skillData = {
+                technical: workforceData.reduce((sum, agent) => sum + (agent.skill_technical_troubleshooting || 0), 0) / workforceData.length,
+                communication: workforceData.reduce((sum, agent) => sum + (agent.skill_communication || 0), 0) / workforceData.length,
+                product: workforceData.reduce((sum, agent) => sum + (agent.skill_product_knowledge || 0), 0) / workforceData.length
+            };
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Technical', 'Communication', 'Product Knowledge'],
+                    datasets: [{
+                        label: 'Average Skill Level',
+                        data: [skillData.technical, skillData.communication, skillData.product],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 5
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createLocationChart() {
+            const ctx = document.getElementById('locationChart').getContext('2d');
+            
+            const locationCounts = {};
+            workforceData.forEach(agent => {
+                locationCounts[agent.location] = (locationCounts[agent.location] || 0) + 1;
+            });
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(locationCounts),
+                    datasets: [{
+                        data: Object.values(locationCounts),
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function runSimulation() {
+            const scenarioType = document.getElementById('scenarioType').value;
+            const impactPercent = parseInt(document.getElementById('impactPercent').value);
+            const priorityMetric = document.getElementById('priorityMetric').value;
+            
+            // Simple simulation logic
+            const simulationResults = calculateSimulation(scenarioType, impactPercent, priorityMetric);
+            
+            document.getElementById('simulation-results').classList.remove('hidden');
+            
+            document.getElementById('financial-impact').innerHTML = `
+                <div class="metric">
+                    <span>Cost Savings</span>
+                    <span class="metric-value">$${simulationResults.costSavings.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                    <span>ROI Timeline</span>
+                    <span class="metric-value">${simulationResults.roiMonths} months</span>
+                </div>
+                <div class="metric">
+                    <span>Budget Impact</span>
+                    <span class="metric-value">${simulationResults.budgetImpact}%</span>
+                </div>
+            `;
+            
+            document.getElementById('team-impact').innerHTML = `
+                <div class="metric">
+                    <span>Agents Affected</span>
+                    <span class="metric-value">${simulationResults.agentsAffected}</span>
+                </div>
+                <div class="metric">
+                    <span>Avg Performance Impact</span>
+                    <span class="metric-value">${simulationResults.performanceImpact}%</span>
+                </div>
+                <div class="metric">
+                    <span>CSAT Impact</span>
+                    <span class="metric-value">${simulationResults.csatImpact}%</span>
+                </div>
+            `;
+            
+            document.getElementById('recommendations').innerHTML = simulationResults.recommendations.map(rec => 
+                `<div style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;">• ${rec}</div>`
+            ).join('');
+            
+            document.getElementById('risk-assessment').innerHTML = `
+                <div class="metric">
+                    <span>Overall Risk Level</span>
+                    <span class="metric-value" style="color: ${simulationResults.riskLevel === 'High' ? '#e74c3c' : simulationResults.riskLevel === 'Medium' ? '#f39c12' : '#27ae60'}">${simulationResults.riskLevel}</span>
+                </div>
+                <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                    ${simulationResults.riskDescription}
+                </div>
+            `;
+        }
+        
+        function calculateSimulation(scenarioType, impactPercent, priorityMetric) {
+            const totalAgents = workforceData.length;
+            const agentsAffected = Math.round(totalAgents * impactPercent / 100);
+            const avgSalary = workforceData.reduce((sum, agent) => sum + (agent.base_salary || 60000), 0) / totalAgents;
+            
+            let costSavings = 0;
+            let performanceImpact = 0;
+            let csatImpact = 0;
+            let recommendations = [];
+            let riskLevel = 'Medium';
+            let riskDescription = '';
+            
+            switch(scenarioType) {
+                case 'reduction':
+                    costSavings = agentsAffected * avgSalary;
+                    performanceImpact = -impactPercent * 0.3;
+                    csatImpact = -impactPercent * 0.2;
+                    recommendations = [
+                        'Focus on retaining high-performing agents',
+                        'Implement cross-training to reduce skill gaps',
+                        'Monitor customer satisfaction closely',
+                        'Consider phased reduction to minimize impact'
+                    ];
+                    riskLevel = impactPercent > 20 ? 'High' : 'Medium';
+                    riskDescription = `Reducing ${impactPercent}% of workforce carries significant operational risk.`;
+                    break;
+                    
+                case 'ai':
+                    costSavings = agentsAffected * avgSalary * 0.3; // Partial savings from AI assistance
+                    performanceImpact = impactPercent * 0.4;
+                    csatImpact = impactPercent * 0.1;
+                    recommendations = [
+                        'Start with routine inquiry automation',
+                        'Invest in agent training for AI collaboration',
+                        'Monitor AI accuracy and customer feedback',
+                        'Gradually expand AI capabilities'
+                    ];
+                    riskLevel = 'Low';
+                    riskDescription = 'AI augmentation typically has lower risk than workforce reduction.';
+                    break;
+                    
+                case 'capacity':
+                    costSavings = 0; // No direct cost savings, efficiency gains
+                    performanceImpact = impactPercent * 0.2;
+                    csatImpact = impactPercent * 0.15;
+                    recommendations = [
+                        'Optimize agent schedules and assignments',
+                        'Redistribute workload based on skills',
+                        'Implement flexible capacity management',
+                        'Focus on high-impact activities'
+                    ];
+                    riskLevel = 'Low';
+                    riskDescription = 'Capacity redistribution has minimal risk when done strategically.';
+                    break;
+            }
+            
+            return {
+                costSavings,
+                roiMonths: Math.round(12 / Math.max(impactPercent / 10, 1)),
+                budgetImpact: Math.round(costSavings / (totalAgents * avgSalary) * 100),
+                agentsAffected,
+                performanceImpact: performanceImpact.toFixed(1),
+                csatImpact: csatImpact.toFixed(1),
+                recommendations,
+                riskLevel,
+                riskDescription
+            };
+        }
+    </script>
+</body>
+</html>
